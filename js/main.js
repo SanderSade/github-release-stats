@@ -4,9 +4,9 @@ var apiRoot = "https://api.github.com/";
 function getQueryVariable(variable) {
 	var query = window.location.search.substring(1);
 	var vars = query.split("&");
-	for(var i = 0; i < vars.length; i++) {
+	for (var i = 0; i < vars.length; i++) {
 		var pair = vars[i].split("=");
-		if(pair[0] == variable) {
+		if (pair[0] === variable) {
 			return pair[1];
 		}
 	}
@@ -15,7 +15,7 @@ function getQueryVariable(variable) {
 
 // Format numbers
 function formatNumber(value) {
-	return value.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1,')
+	return value.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1,');
 }
 
 // Validate the user input
@@ -30,89 +30,108 @@ function validateInput() {
 // Move to #repository when hit enter and if it's empty or trigger the button
 $("#username").keyup(function (event) {
 	if (event.keyCode === 13) {
-		if (!$("#repository").val()) {
-			$("#repository").focus();
-		} else {
-			$("#get-stats-button").click();
-		}
+		$("#get-stats-button").click();
 	}
 });
 
 // Callback function for getting user repositories
-function getUserRepos() {
+function getRepoStats() {
 	var user = $("#username").val();
-	var repoNames = [];
+
+	var resultDiv = $("#stats-result");
+	resultDiv.html("");
+	resultDiv.show("");
 
 	var url = apiRoot + "users/" + user + "/repos";
-	$.getJSON(url, function(data) {
-		$.each(data, function(index, item) {
+	$.getJSON(url, function (data) {
+
+		var repoNames = [];
+
+		$.each(data, function (index, item) {
 			repoNames.push(item.name);
 		});
+
+
+		$.each(repoNames, function (index, repository) {
+			var url = apiRoot + "repos/" + user + "/" + repository + "/releases";
+			$.getJSON(url, function (item) { showStats(item, repository); })
+				.fail(function (item) { showStats(item, repository); });
+
+		});
+	}).fail(function (item) {
+		if (item.status === 403) {
+			handleRateLimiting(item, "Request rate limit hit");
+		}
 	});
-	return repoNames;
 }
 
-// Display the stats
-function showStats(data) {
-	var err = false;
-	var errMessage = '';
+function handleRateLimiting(item, title) {
+	var date = new Date(new Number(item.getResponseHeader("X-RateLimit-Reset")) * 1000);
+	var reset = new Date(date - new Date()).getMinutes();
+	var resultDiv = $("#stats-result");
+	resultDiv.append("<div class='col-md-6 col-md-offset-3 alert alert-danger output'><h3>" + title + "</h3>You have exceeded GitHub's rate limiting.<br />API rate limit reset will be in " + reset + " minutes</div>");
+}
 
-	if(data.status == 404) {
+
+// Display the stats
+function showStats(data, repository) {
+	var err = false;
+	var errMessage = "";
+
+	if (data.status === 404) {
 		err = true;
 		errMessage = "The project does not exist!";
 	}
 
-	if(data.status == 403) {
-		err = true;
-		errMessage = "You've exceeded GitHub's rate limiting.<br />Please try again in about an hour.";
+	if (data.status === 403) {
+		handleRateLimiting(data, repository);
+		return;
 	}
 
-	if(data.length == 0) {
+	if (data.length === 0) {
 		err = true;
 		errMessage = "There are no releases for this project";
 	}
 
 	var html = "";
 
-	if(err) {
-		html += "<div class='col-md-6 col-md-offset-3 alert alert-danger output'>" + errMessage + "</div>";
+	if (err) {
+		html += "<div class='col-md-6 col-md-offset-3 alert alert-danger output'><h3>" + repository + "</h3>" + errMessage + "</div>";
 	} else {
-		html += "<div class='col-md-6 col-md-offset-3 output'>";
-
 		var isLatestRelease = true;
 		var totalDownloadCount = 0;
-		$.each(data, function(index, item) {
+		$.each(data, function (index, item) {
 			var releaseTag = item.tag_name;
 			var releaseBadge = "";
 			var releaseClassNames = "release";
-			var releaseURL = item.html_url;
+			var releaseUrl = item.html_url;
 			var isPreRelease = item.prerelease;
 			var releaseAssets = item.assets;
 			var releaseDownloadCount = 0;
 			var releaseAuthor = item.author;
 			var publishDate = item.published_at.split("T")[0];
 
-			if(isPreRelease) {
+			if (isPreRelease) {
 				releaseBadge = "&nbsp;&nbsp;<span class='badge'>Pre-release</span>";
 				releaseClassNames += " pre-release";
-			} else if(isLatestRelease) {
+			} else if (isLatestRelease) {
 				releaseBadge = "&nbsp;&nbsp;<span class='badge'>Latest release</span>";
 				releaseClassNames += " latest-release";
 				isLatestRelease = false;
 			}
 
-			var downloadInfoHTML = "";
-			if(releaseAssets.length) {
-				downloadInfoHTML += "<h4><span class='glyphicon glyphicon-download'></span>&nbsp;&nbsp;" +
+			var downloadInfoHtml = "";
+			if (releaseAssets.length) {
+				downloadInfoHtml += "<h4><span class='glyphicon glyphicon-download'></span>&nbsp;&nbsp;" +
 					"Download Info</h4>";
 
-				downloadInfoHTML += "<ul>";
+				downloadInfoHtml += "<ul>";
 
-				$.each(releaseAssets, function(index, asset) {
+				$.each(releaseAssets, function (index, asset) {
 					var assetSize = (asset.size / 1048576.0).toFixed(2);
 					var lastUpdate = asset.updated_at.split("T")[0];
 
-					downloadInfoHTML += "<li><code>" + asset.name + "</code> (" + assetSize + "&nbsp;MiB) - " +
+					downloadInfoHtml += "<li><code>" + asset.name + "</code> (" + assetSize + "&nbsp;MiB) - " +
 						"downloaded " + formatNumber(asset.download_count) + "&nbsp;times. " +
 						"Last&nbsp;updated&nbsp;on&nbsp;" + lastUpdate + "</li>";
 
@@ -124,7 +143,7 @@ function showStats(data) {
 			html += "<div class='row " + releaseClassNames + "'>";
 
 			html += "<h3><span class='glyphicon glyphicon-tag'></span>&nbsp;&nbsp;" +
-				"<a href='" + releaseURL + "' target='_blank'>" + releaseTag + "</a>" +
+				"<a href='" + releaseUrl + "' target='_blank'>" + releaseTag + "</a>" +
 				releaseBadge + "</h3>" + "<hr class='release-hr'>";
 
 			html += "<h4><span class='glyphicon glyphicon-info-sign'></span>&nbsp;&nbsp;" +
@@ -134,83 +153,70 @@ function showStats(data) {
 
 			if (releaseAuthor) {
 				html += "<li><span class='glyphicon glyphicon-user'></span>&nbsp;&nbsp;" +
-					"Author: <a href='" + releaseAuthor.html_url + "'>@" + releaseAuthor.login  +"</a></li>";
+					"Author: <a href='" + releaseAuthor.html_url + "'>@" + releaseAuthor.login + "</a></li>";
 			}
 
 			html += "<li><span class='glyphicon glyphicon-calendar'></span>&nbsp;&nbsp;" +
 				"Published: " + publishDate + "</li>";
 
-			if(releaseDownloadCount) {
+			if (releaseDownloadCount) {
 				html += "<li><span class='glyphicon glyphicon-download'></span>&nbsp;&nbsp;" +
 					"Downloads: " + formatNumber(releaseDownloadCount) + "</li>";
 			}
 
 			html += "</ul>";
 
-			html += downloadInfoHTML;
+			html += downloadInfoHtml;
 
 			html += "</div>";
 		});
 
-		if(totalDownloadCount) {
-			var totalHTML = "<div class='row total-downloads'>";
-			totalHTML += "<h1><span class='glyphicon glyphicon-download'></span>&nbsp;&nbsp;Total Downloads</h1>";
-			totalHTML += "<span>" + formatNumber(totalDownloadCount) + "</span>";
-			totalHTML += "</div>";
 
-			html = totalHTML + html;
+		var totalHtml = "";
+		if (totalDownloadCount) {
+			totalHtml += "<div class='row total-downloads'>";
+			totalHtml += "<h1><span class='glyphicon glyphicon-download'></span>&nbsp;&nbsp;Total Downloads</h1>";
+			totalHtml += "<span>" + formatNumber(totalDownloadCount) + "</span>";
+			totalHtml += "</div>";
 		}
 
 		html += "</div>";
+
+		html = "<div class='col-md-6 col-md-offset-3 output'><h3>" + repository + "</h3>" + totalHtml + html;
+
 	}
-
 	var resultDiv = $("#stats-result");
-	resultDiv.hide();
-	resultDiv.html(html);
-	$("#loader-gif").hide();
-	resultDiv.slideDown();
+	resultDiv.append(html);
 }
 
-// Callback function for getting release stats
-function getStats() {
-	var user = $("#username").val();
-	var repository = $("#repository").val();
 
-	var url = apiRoot + "repos/" + user + "/" + repository + "/releases";
-	$.getJSON(url, showStats).fail(showStats);
-}
 
 // The main function
-$(function() {
-	$("#loader-gif").hide();
-
+$(function () {
 	validateInput();
-	$("#username, #repository").keyup(validateInput);
+	$("#username").keyup(validateInput);
 
+	$("#get-stats-button").click(function () {
 
-	$("#get-stats-button").click(function() {
-		window.location = "?username=" + $("#username").val() +
-			"&repository=" + $("#repository").val() +
-			((getQueryVariable("search") == "0") ? "&search=0" : "");
+		var url = "?username=" +
+			$("#username").val() +
+			(getQueryVariable("search") === "0" ? "&search=0" : "");
+		window.history.replaceState(null, "GitHub Release Stats - " + $("#username").val(), url);
+		getRepoStats();
 	});
 
 	var username = getQueryVariable("username");
-	var repository = getQueryVariable("repository");
 	var showSearch = getQueryVariable("search");
 
-	if(username != "" && repository != "") {
+	if (username !== "") {
 		$("#username").val(username);
 		$("#title .username").text(username);
-		$("#repository").val(repository);
-		$("#title .repository").text(repository);
 		validateInput();
-		getUserRepos();
 		$(".output").hide();
 		$("#description").hide();
-		$("#loader-gif").show();
-		getStats();
+		getRepoStats();
 
-		if(showSearch == "0") {
+		if (showSearch === "0") {
 			$("#search").hide();
 			$("#description").hide();
 			$("#title").show();
