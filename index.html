@@ -1,17 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 	<title>Github Release Stats</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="description" content="Get the latest release stats like download counts, release dates, author on any Github project">
 	<meta name="keywords" content="Github, release, download, count">
+	<meta charset="UTF-8">
 	<link rel="icon" href="img/favicon.ico">
 	<link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Mono" rel="stylesheet" type="text/css">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 	<link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-<nav class="navbar navbar-default" role="navigation">
+<nav class="navbar navbar-default">
 	<div class="container-fluid">
 		<div class="navbar-header">
 			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#main-navbar">
@@ -40,7 +41,6 @@
 <div class="container">
 	<div class="row" id="search">
 		<div class="col-md-4 col-md-offset-4">
-			<h1>Enter username...</h1>
 			<div class="form form-inline">
 				<div class="form-group">
 					<input type="text" class="form-control" id="username" placeholder="Github username">
@@ -49,16 +49,12 @@
 			</div>
 		</div>
 	</div>
-	<div class="row" id="title">
-		<h1><span class="username"></span>/<span class="repository"></span></h1>
-		<span class="description">release stats</span>
-	</div>
 	<div class="row" id="stats-result">
 	</div>
 </div>
-<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-<script type="text/javascript" src="js/main.js"></script>
+<script src="js/main.js"></script>
 </body>
 
 </html>
